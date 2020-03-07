@@ -1,13 +1,16 @@
 import os
-import requests
 import random
-import _thread as thread
+import shutil
 from uuid import uuid4
 
+import requests
+
+import _thread as thread
 import numpy as np
 import skimage
-from skimage.filters import gaussian
 from PIL import Image
+from skimage.filters import gaussian
+
 
 def compress_image(image, path_original):
     size = 1920, 1080
@@ -21,14 +24,14 @@ def compress_image(image, path_original):
         image.thumbnail(size, Image.ANTIALIAS)
         image.save(first_name, quality=85)
     elif image.size[0] > width:
-        wpercent = (width/float(image.size[0]))
-        height = int((float(image.size[1])*float(wpercent)))
-        image = image.resize((width,height), PIL.Image.ANTIALIAS)
-        image.save(first_name,quality=85)
+        wpercent = (width / float(image.size[0]))
+        height = int((float(image.size[1]) * float(wpercent)))
+        image = image.resize((width, height), PIL.Image.ANTIALIAS)
+        image.save(first_name, quality=85)
     elif image.size[1] > height:
-        wpercent = (height/float(image.size[1]))
-        width = int((float(image.size[0])*float(wpercent)))
-        image = image.resize((width,height), Image.ANTIALIAS)
+        wpercent = (height / float(image.size[1]))
+        width = int((float(image.size[0]) * float(wpercent)))
+        image = image.resize((width, height), Image.ANTIALIAS)
         image.save(first_name, quality=85)
     else:
         image.save(first_name, quality=85)
@@ -53,13 +56,13 @@ def convertToJPG(path_original):
 
     elif img.format == "PNG":
         try:
-            image = Image.new("RGB", img.size, (255,255,255))
-            image.paste(img,img)
+            image = Image.new("RGB", img.size, (255, 255, 255))
+            image.paste(img, img)
             compress_image(image, path_original)
         except ValueError:
             image = img.convert('RGB')
             compress_image(image, path_original)
-        
+
         img.close()
 
     elif img.format == "BMP":
@@ -68,25 +71,34 @@ def convertToJPG(path_original):
         img.close()
 
 
+def download(url, filepath):
+    print(f'Download {url}')
+    print('It may take a while. Please wait ...')
+    r = requests.get(url, stream=True)
+    if r.status_code == 200:
+        with open(filepath, "wb") as f:
+            r.raw.decode_content = True
+            shutil.copyfileobj(r.raw, f)
+    print(f'Finish download {url}')
+
 
 def blur(image, x0, x1, y0, y1, sigma=1, multichannel=True):
     y0, y1 = min(y0, y1), max(y0, y1)
     x0, x1 = min(x0, x1), max(x0, x1)
     im = image.copy()
-    sub_im = im[y0:y1,x0:x1].copy()
+    sub_im = im[y0:y1, x0:x1].copy()
     blur_sub_im = gaussian(sub_im, sigma=sigma, multichannel=multichannel)
     blur_sub_im = np.round(255 * blur_sub_im)
-    im[y0:y1,x0:x1] = blur_sub_im
+    im[y0:y1, x0:x1] = blur_sub_im
     return im
 
 
+# def download(url, filename):
+#     data = requests.get(url).content
+#     with open(filename, 'wb') as handler:
+#         handler.write(data)
 
-def download(url, filename):
-    data = requests.get(url).content
-    with open(filename, 'wb') as handler:
-        handler.write(data)
-
-    return filename
+#     return filename
 
 
 def generate_random_filename(upload_directory, extension):
@@ -97,7 +109,10 @@ def generate_random_filename(upload_directory, extension):
 
 def clean_me(filename):
     if os.path.exists(filename):
-        os.remove(filename)
+        try:
+            os.remove(filename)
+        except:
+            pass
 
 
 def clean_all(files):
@@ -112,9 +127,7 @@ def create_directory(path):
 def get_model_bin(url, output_path):
     if not os.path.exists(output_path):
         create_directory(output_path)
-        cmd = "wget -O %s %s" % (output_path, url)
-        print(cmd)
-        os.system(cmd)
+        download(url, output_path)
 
     return output_path
 
@@ -123,4 +136,3 @@ def get_model_bin(url, output_path):
 def get_multi_model_bin(model_list):
     for m in model_list:
         thread.start_new_thread(get_model_bin, m)
-
