@@ -19,11 +19,13 @@ torch.backends.cudnn.benchmark = True
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 ALLOWED_EXTENSIONS = {
-    'avi', 'mov', 'flv', 'swf', 'webm', 'mpeg', 'mpv', 'mp4', 'png', 'jpg',
-    'jpeg', 'gif', 'jfif'
+    'avi', 'mov', 'flv', 'swf', 'webm', 'ts', 'mpeg', 'mpv', 'mp4', 'png',
+    'jpg', 'jpeg', 'gif', 'jfif'
 }
 
-VIDEO_FORMATS = {'avi', 'mov', 'flv', 'swf', 'webm', 'mpeg', 'mpv', 'mp4'}
+VIDEO_FORMATS = {
+    'avi', 'mov', 'flv', 'swf', 'ts', 'webm', 'mpeg', 'mpv', 'mp4'
+}
 app = Flask(__name__)
 
 
@@ -33,7 +35,6 @@ def allowed_file(filename):
 
 
 def is_video(filename):
-    print(filename.rsplit('.', 1))
     return filename.rsplit('.', 1)[1].lower() in VIDEO_FORMATS
 
 
@@ -56,13 +57,16 @@ def process():
         filename = secure_filename(submitted_file.filename)
         input_path = os.path.join(app.config['UPLOAD_FOLDER'],
                                   'deoldified_' + filename)
-        output_path = os.path.join(results_img_directory,
-                                   os.path.basename(input_path))
+
         submitted_file.save(input_path)
         render_factor = int(request.form.get('render_factor', 10))
         try:
             if is_video(input_path):
+                output_path = os.path.join(results_video_directory,
+                                           os.path.basename(input_path))
                 return process_video(input_path, output_path, render_factor)
+            output_path = os.path.join(results_img_directory,
+                                       os.path.basename(input_path))
             return process_image(input_path, output_path, render_factor)
         finally:
             clean_all([input_path, output_path])
